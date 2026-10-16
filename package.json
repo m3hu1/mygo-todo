@@ -1,0 +1,16 @@
+{
+  "name": "todo-menubar",
+  "private": true,
+  "type": "module",
+  "workspaces": ["frontend"],
+  "scripts": {
+    "dev": "mygo dev",
+    "build": "mygo build",
+    "generate": "mygo generate",
+    "typecheck": "bun run --cwd frontend typecheck",
+    "test": "go test ./..."
+  },
+  "devDependencies": {
+    "mygo-cli": "^0.5.5"
+  }
+}
