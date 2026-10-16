@@ -1,0 +1,17 @@
+{
+  "name": "todo-menubar-frontend",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "mygo-runtime": "^0.5.5"
+  },
+  "devDependencies": {
+    "typescript": "^7",
+    "vite": "^8"
+  }
+}
