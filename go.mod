@@ -1,4 +1,4 @@
-module github.com/mehul/todo-menubar
+module github.com/m3hu1/mygo-todo
 
 go 1.27.1
 

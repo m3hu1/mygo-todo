@@ -17,8 +17,8 @@ import (
 	"time"
 
 	"github.com/egoist/mygo"
-	"github.com/mehul/todo-menubar/internal/notes"
-	"github.com/mehul/todo-menubar/internal/todos"
+	"github.com/m3hu1/mygo-todo/internal/notes"
+	"github.com/m3hu1/mygo-todo/internal/todos"
 )
 
 // Show asks the panel to open on a view, which is how the global shortcuts

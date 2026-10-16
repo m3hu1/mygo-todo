@@ -7,4 +7,5 @@ mygo_windows_*.syso
 .DS_Store
 
 # `mygo vet`/`mygo generate` leave a `go build` binary named after the module
+/mygo-todo
 /todo-menubar
