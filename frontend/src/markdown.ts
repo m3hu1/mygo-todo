@@ -1,5 +1,7 @@
 // A small markdown renderer for the note preview: enough of the syntax for
 // daily notes, with no dependency and no way to inject markup from the text.
+// A link typed plain — an http(s) URL, or a bare domain under one of the
+// famous endings — links itself; rarer domains need [label](url) or https:.
 
 const ESCAPES: Record<string, string> = {
   "&": "&amp;",
@@ -20,17 +22,38 @@ function safeHref(href: string): string | null {
   return null;
 }
 
+/** URLCHAR is one character inside a URL as the escaped text holds it: a
+    `&amp;` in a query string counts, but an `&` that starts &quot;, &#39;,
+    &lt; or &gt; ends the link where a quote or a bracket ended it. */
+const URLCHAR = String.raw`(?:&(?!quot;|#39;|lt;|gt;)|[^\s&<>])`;
+
+/** AUTOLINK matches a link typed plain: any http(s) URL, or a bare domain
+    under one of the famous endings. Anything rarer stays text unless the
+    note links it as [label](url) or types the https: itself. */
+const AUTOLINK = new RegExp(
+  `(^|[\\s(;>])(https?:\\/\\/${URLCHAR}+|` +
+    `[\\w-]+(?:\\.[\\w-]+)*\\.(?:com|net|org|edu|gov|io|ai|app|dev|co|in|me|uk)` +
+    `(?![\\w-])(?::\\d+)?(?:[/?#]${URLCHAR}*)?)`,
+  "gi",
+);
+
 /**
  * inline runs the span level rules over one piece of text. Code spans are
  * lifted out of the escaped text first, so nothing inside them is taken for
  * markup.
  */
 function inline(raw: string): string {
-  const code: string[] = [];
-  let text = escapeHtml(raw).replace(/`([^`\n]+)`/g, (_, body: string) => {
-    code.push(`<code>${body}</code>`);
-    return `\u0000${code.length - 1}\u0000`;
-  });
+  const stash: string[] = [];
+  // Stow hides finished markup from the rules that follow; restore puts it
+  // back at the end. A stowed span holds whatever it had already stowed
+  // inside, so its placeholders are unwrapped as it goes in.
+  const stow = (html: string) => `\u0000${stash.push(restore(html)) - 1}\u0000`;
+  const restore = (text: string) =>
+    text.replace(/\u0000(\d+)\u0000/g, (_, i: string) => stash[+i]!);
+
+  let text = escapeHtml(raw).replace(/`([^`\n]+)`/g, (_, body: string) =>
+    stow(`<code>${body}</code>`),
+  );
 
   text = text
     .replace(/!\[([^\]]*)\]\(([^)\s]+)\)/g, (all, alt: string, src: string) =>
@@ -52,12 +75,31 @@ function inline(raw: string): string {
     // so it never doubles with the rule below.
     .replace(/ {2,}(?:\n|$)/g, "<br />");
 
+  // Links typed plain: what the rules above already drew as an anchor or an
+  // image is stowed whole, so autolink only touches the words left around it.
+  text = text
+    .replace(/<a\b[^>]*>[\s\S]*?<\/a>|<img\b[^>]*>/g, stow)
+    .replace(AUTOLINK, (_, pre: string, url: string) => {
+      let link = url;
+      while (/[.,;:!?)]$/.test(link)) {
+        // A ) stays when the link itself opened one, as on wikipedia.
+        if (
+          link.endsWith(")") &&
+          link.split("(").length - 1 >= link.split(")").length - 1
+        )
+          break;
+        link = link.slice(0, -1);
+      }
+      const href = safeHref(link);
+      return href
+        ? `${pre}<a href="${href}" target="_blank" rel="noreferrer">${link}</a>${url.slice(link.length)}`
+        : pre + url;
+    });
+
   // A single newline inside a paragraph breaks too, the way notes read: what
   // was typed on its own line stays on its own line. Code spans hold no
   // newlines, so restoring them first changes nothing here.
-  return text
-    .replace(/\u0000(\d+)\u0000/g, (_, i: string) => code[+i]!)
-    .replace(/\n/g, "<br />");
+  return restore(text).replace(/\n/g, "<br />");
 }
 
 // The block level rules match the text as it was written; every piece they
